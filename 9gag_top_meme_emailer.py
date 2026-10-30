@@ -442,11 +442,17 @@ def get_top_memes_by_section(per_section, output_dir, excluded_ids):
     return result
 
 
+# Email look shared by all the bots: system fonts, neutral greys, one blue accent.
+FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif"
+H2_STYLE = f"margin:24px 8px 4px; font-size:16px; font-weight:600; color:#1D2129; font-family:{FONT};"
+
+
 def build_section_html(title, emoji, memes, columns, image_base_url):
+    # emoji is still listed in SECTIONS but no longer drawn: headings stay plain text.
     if not memes:
         return f"""
-<h2 style="color:#222; font-family:Arial,Helvetica,sans-serif;">{emoji} New {title}</h2>
-<p style="color:#999; font-size:13px; font-family:Arial,Helvetica,sans-serif;">No new qualifying posts since the last check.</p>"""
+<h2 style="{H2_STYLE}">New {title}</h2>
+<p style="margin:0 8px; color:#6E7581; font-size:13px; font-family:{FONT};">No new qualifying posts since the last check.</p>"""
 
     cards = []
     for m in memes:
@@ -457,33 +463,38 @@ def build_section_html(title, emoji, memes, columns, image_base_url):
         teaser_esc = escape(teaser_raw)
         img_url = f"{image_base_url}/{quote(m['filename'])}"
         play_badge = (
-            '<span style="position:absolute; top:6px; right:6px; background:rgba(0,0,0,0.65); '
-            'color:#fff; font-size:12px; padding:2px 7px; border-radius:12px;">&#9654; GIF</span>'
+            '<span style="position:absolute; top:6px; right:6px; background:rgba(29,33,41,0.75); '
+            'color:#fff; font-size:12px; padding:2px 6px; border-radius:4px;">&#9654; GIF</span>'
             if m["has_gif_preview"] else ""
         )
         note = (
-            '<div style="font-size:11px; color:#4a90d9; margin-top:4px;">Animated preview</div>'
+            '<div style="font-size:12px; color:#3B5BDB; margin-top:4px;">Animated preview</div>'
             if m["has_gif_preview"] else ""
         )
         cards.append(f"""
-<td style="padding:8px; vertical-align:top; width:{100 // columns}%;">
-<details open style="border:1px solid #e0e0e0; border-radius:10px; overflow:hidden; font-family:Arial,Helvetica,sans-serif;">
-<summary style="cursor:pointer; padding:10px; background:#fafafa; border-bottom:1px solid #e0e0e0; font-size:13px; color:#222;">
-<span style="color:#888;">#{m['rank']}</span>&nbsp;{teaser_esc}&nbsp;<span style="color:#888; white-space:nowrap;">&#9650; {m['votes']:,}</span>
+<td style="padding:6px; vertical-align:top; width:{100 // columns}%;">
+<details open style="background:#FFFFFF; border:1px solid #E2E4E8; border-radius:6px; overflow:hidden; font-family:{FONT};">
+<summary style="cursor:pointer; padding:10px 12px; background:#F7F8FA; border-bottom:1px solid #E2E4E8; font-size:13px; color:#1D2129;">
+<span style="color:#6E7581;">#{m['rank']}</span>&nbsp;{teaser_esc}&nbsp;<span style="color:#596170; white-space:nowrap;">&#9650; {m['votes']:,}</span>
 </summary>
 <a href="{escape(m['post_url'])}" style="text-decoration:none; color:inherit;">
 <div style="position:relative;">
-<img src="{escape(img_url)}" alt="{title_esc}" style="display:block; width:100%; height:auto; max-height:500px; object-fit:contain; background:#f5f5f5;">
+<img src="{escape(img_url)}" alt="{title_esc}" style="display:block; width:100%; height:auto; max-height:500px; object-fit:contain; background:#F7F8FA;">
 {play_badge}
 </div>
-<div style="padding:10px;">
-<div style="font-size:13px; color:#222; line-height:1.35;">{title_esc}</div>
-<div style="font-size:12px; color:#888; margin-top:6px;">&#9650; {m['votes']:,} upvotes</div>
+<div style="padding:10px 12px;">
+<div style="font-size:14px; color:#1D2129; line-height:1.4;">{title_esc}</div>
+<div style="font-size:12px; color:#596170; margin-top:4px;">{m['votes']:,} upvotes</div>
 {note}
 </div>
 </a>
 </details>
 </td>""")
+
+    # Lower-case ordinary words but keep acronyms: "Static Images" -> "static images", "GIFs" stays.
+    noun = " ".join(w if w[1:] != w[1:].lower() else w.lower() for w in title.split())
+    if len(memes) == 1:
+        noun = noun[:-1]  # "1 new video", not "1 new videos"
 
     rows = []
     for i in range(0, len(cards), columns):
@@ -492,7 +503,7 @@ def build_section_html(title, emoji, memes, columns, image_base_url):
         rows.append(f"<tr>{''.join(row_cards)}</tr>")
 
     return f"""
-<h2 style="color:#222; font-family:Arial,Helvetica,sans-serif;">{emoji} {len(memes)} New {title}</h2>
+<h2 style="{H2_STYLE}">{len(memes)} new {noun}</h2>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:900px;">
 {''.join(rows)}
 </table>"""
@@ -506,10 +517,11 @@ def build_html(sections, columns, image_base_url):
     total = sum(len(sections[k]) for k, _, _ in SECTIONS)
     return f"""\
 <html>
-  <body style="margin:0; padding:20px; background:#f4f4f4; font-family:Arial,Helvetica,sans-serif;">
-    <h1 style="color:#222;">Today's Top {total} Memes from 9gag</h1>
+  <body style="margin:0; padding:24px 12px; background:#F4F5F7; font-family:{FONT}; color:#1D2129;">
+    <div style="margin:0 8px; font-size:20px; font-weight:600; line-height:1.3; color:#1D2129;">Today's top {total} memes from 9GAG</div>
+    <div style="margin:2px 8px 0; font-size:13px; color:#596170;">Ranked by upvotes within each category on 9GAG's hot feed.</div>
     {''.join(body_parts)}
-    <p style="color:#999; font-size:12px; margin-top:20px;">Ranked by upvotes within each category on 9gag's hot feed. Tap any card to view the original post. GIFs animate automatically in Gmail and most mail apps; some desktop clients like Outlook only show the first frame.</p>
+    <p style="margin:20px 8px 0; color:#6E7581; font-size:12px;">Tap any card to view the original post. GIFs animate automatically in Gmail and most mail apps; some desktop clients like Outlook only show the first frame.</p>
   </body>
 </html>"""
 
